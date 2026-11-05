@@ -9,7 +9,10 @@ export type Student = {
   city: string;
   startDate: string;
   guardian: string;
+  /** Guardian phone; the number next to "Veli". */
   phone: string;
+  /** The student's own phone; optional so old records stay valid. */
+  talebePhone?: string | undefined;
   status: "İyi" | "Orta";
   /** Class the student belongs to; missing on old records = İbtidai. */
   sinif?: GroupId | undefined;

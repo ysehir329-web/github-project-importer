@@ -106,7 +106,7 @@ function header(d: Doc, kicker: string, s: Student, photo = false) {
 
 function infoPanel(f: Flow, s: Student) {
   const d = f.doc;
-  const items = ([["Veli", s.guardian], ["Telefon", s.phone], ["Şehir", s.city], ["Kursa Başlangıç", fmt(s.startDate)]] as const).filter(([, v]) => v);
+  const items = ([["Veli", s.guardian], ["Veli Telefonu", s.phone], ["Talebe Telefonu", s.talebePhone], ["Şehir", s.city], ["Kursa Başlangıç", fmt(s.startDate)]] as const).filter(([, v]) => v);
   if (!items.length) return;
   const rows = Math.ceil(items.length / 2);
   const h = rows * 12 + 4;

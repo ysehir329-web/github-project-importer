@@ -6,7 +6,7 @@ import { Field, inputCls, primaryBtn } from "./Sheet";
 export type StudentInput = Omit<Student, "id">;
 
 export const emptyStudent: StudentInput = {
-  name: "", age: "", group: "Daimi Grup", city: "", startDate: localIso(), guardian: "", phone: "", status: "İyi",
+  name: "", age: "", group: "Daimi Grup", city: "", startDate: localIso(), guardian: "", phone: "", talebePhone: "", status: "İyi",
 };
 
 export function StudentForm({ initial, onSubmit }: { initial: StudentInput; onSubmit: (s: StudentInput) => void }) {
@@ -25,7 +25,8 @@ export function StudentForm({ initial, onSubmit }: { initial: StudentInput; onSu
         <Field label="Şehir"><input className={inputCls} value={f.city} onChange={set("city")} /></Field>
         <Field label="Başlangıç"><input type="date" className={inputCls} value={f.startDate} onChange={set("startDate")} /></Field>
         <Field label="Veli"><input className={inputCls} value={f.guardian} onChange={set("guardian")} /></Field>
-        <Field label="Telefon"><input type="tel" className={inputCls} value={f.phone} onChange={set("phone")} /></Field>
+        <Field label="Veli Telefonu"><input type="tel" className={inputCls} value={f.phone} onChange={set("phone")} /></Field>
+        <Field label="Talebe Telefonu"><input type="tel" className={inputCls} value={f.talebePhone ?? ""} onChange={set("talebePhone")} /></Field>
       </div>
       <button className={primaryBtn} disabled={!f.name.trim()}>Kaydet</button>
     </form>

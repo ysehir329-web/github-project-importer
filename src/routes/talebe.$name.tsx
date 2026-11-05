@@ -14,6 +14,7 @@ import { deleteFile } from "@/lib/attachments";
 import { useStore, type Student, type Tutanak } from "@/lib/store";
 import { PdfButton } from "@/components/app/PdfButton";
 import { computeStats, daysSinceFirst, monthly, VAKITLER } from "@/lib/stats";
+import { telHref } from "@/lib/phone";
 
 export const Route = createFileRoute("/talebe/$name")({
   head: () => ({
@@ -31,6 +32,21 @@ export const Route = createFileRoute("/talebe/$name")({
 
 const tabs = ["Yoklama", "Tutanaklar", "Aile Raporu"] as const;
 const vakitIcons = { Sabah: Sunrise, Öğle: Sun, İkindi: CloudSun, Akşam: Sunset, Yatsı: Moon } as Record<string, typeof Clock>;
+
+/** A phone number that opens the dialer with one tap. */
+function PhoneLink({ label, value }: { label: string; value: string }) {
+  const href = telHref(value);
+  if (!href) return <span className="flex items-center gap-1.5"><Phone className="h-4 w-4" /> {label}: {value}</span>;
+  return (
+    <a
+      href={href}
+      title={`${label} numarasını ara: ${value}`}
+      className="-mx-1.5 flex items-center gap-1.5 rounded-xl px-1.5 py-1 font-medium text-primary active:bg-brand-soft"
+    >
+      <Phone className="h-4 w-4" /> {label}: {value}
+    </a>
+  );
+}
 function TutCard({ t, student, onSign, onRemove }: { t: Tutanak; student: Student; onSign?: () => void; onRemove?: () => void }) {
   return (
     <div className="border-b border-border py-4">
@@ -124,10 +140,11 @@ function TalebeDetay() {
           <button onClick={() => setSheet("edit")} className="rounded-xl border border-border p-2" aria-label="Düzenle"><Pencil className="h-4 w-4" /></button>
           <button onClick={remove} className="rounded-xl p-2 text-destructive" aria-label="Sil"><Trash2 className="h-4 w-4" /></button>
         </div>
-        {(student.guardian || student.phone || student.city) && (
+        {(student.guardian || student.phone || student.talebePhone || student.city) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
             {student.guardian && <span className="flex items-center gap-1.5"><User className="h-4 w-4" /> {student.guardian}</span>}
-            {student.phone && <a href={`tel:${student.phone}`} className="flex items-center gap-1.5 text-primary"><Phone className="h-4 w-4" /> {student.phone}</a>}
+            {student.talebePhone && <PhoneLink label="Talebe" value={student.talebePhone} />}
+            {student.phone && <PhoneLink label="Veli" value={student.phone} />}
             {student.city && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {student.city}</span>}
           </div>
         )}
