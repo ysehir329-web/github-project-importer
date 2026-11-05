@@ -90,7 +90,7 @@ function Yoklama() {
             const status = cellStatus(get(s.id), tek);
             return <div key={s.id} className="flex items-center gap-2 border-t border-border px-3 py-3">
               <span className="hidden sm:block"><Avatar name={s.name} size="xs" /></span>
-              <span className="min-w-0 flex-1 break-words text-sm leading-snug">{s.name}</span>
+              <Link to="/talebe/$name" params={{ name: s.id }} title={`${s.name} — profil ve bilgiler`} className="min-w-0 flex-1 break-words text-sm leading-snug hover:text-primary hover:underline">{s.name}</Link>
               <Button variant="ghost" size="icon" onClick={() => change(s.id, tek, status === "geldi" ? "yok" : "geldi")} aria-label={`${s.name} ${tek} Geldi`} aria-pressed={status === "geldi"} title={CELL_LABEL[status]} className={`h-8 w-8 shrink-0 border ${statusClass(status)}`}>{status === "geldi" ? <Check /> : CELL_LETTER[status]}</Button>
               {notes.map((note) => <Button key={note} variant="ghost" size="sm" onClick={() => change(s.id, tek, status === note ? "yok" : note)} aria-label={`${s.name} ${tek} ${CELL_LABEL[note]}`} aria-pressed={status === note} className={`h-8 w-10 shrink-0 border px-0 text-[11px] ${status === note ? statusClass(note) : "border-border bg-surface text-muted-foreground"}`}>{CELL_LABEL[note]}</Button>)}
             </div>;
@@ -103,7 +103,7 @@ function Yoklama() {
             <div className="flex shrink-0 gap-[3px]">{COLUMNS.map((c) => <span key={c} className="w-7 text-center text-[8px] leading-none">{c}</span>)}</div>
           </div>
           {students.map((s) => <div key={s.id} className="flex items-center gap-2 border-t border-border px-3 py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2"><span className="hidden sm:block"><Avatar name={s.name} size="xs" /></span><span className="min-w-0 flex-1 break-words text-xs leading-snug">{s.name}</span></div>
+            <div className="flex min-w-0 flex-1 items-center gap-2"><span className="hidden sm:block"><Avatar name={s.name} size="xs" /></span><Link to="/talebe/$name" params={{ name: s.id }} title={`${s.name} — profil ve bilgiler`} className="min-w-0 flex-1 break-words text-xs leading-snug hover:text-primary hover:underline">{s.name}</Link></div>
             <div className="flex shrink-0 gap-[3px]">{COLUMNS.map((c) => {
               const status = cellStatus(get(s.id), c);
               return <Button key={c} variant="ghost" size="icon" onClick={() => setSelected({ id: s.id, column: c })} aria-label={`${s.name} ${c} ${CELL_LABEL[status]}`} title={`${c}: ${CELL_LABEL[status]}`} className={`h-8 w-7 shrink-0 border text-xs ${statusClass(status)}`}>{status === "geldi" ? <Check /> : CELL_LETTER[status]}</Button>;
