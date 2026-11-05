@@ -4,6 +4,9 @@ import type { LucideIcon } from "./icons";
 
 type Tab = { to: string; label: string; icon: LucideIcon };
 
+/** Clear space between tabs, so a tap in the gap still belongs to the nearest tab. */
+const GAP = 6;
+
 function indexFor(tabs: readonly Tab[], pathname: string) {
   const exact = tabs.findIndex((t) => t.to === pathname);
   if (exact >= 0) return exact;
@@ -13,13 +16,13 @@ function indexFor(tabs: readonly Tab[], pathname: string) {
 }
 
 /**
- * Bottom tab bar. The indicator is positioned with pure CSS percentages
- * (no measuring), so it is visible in the very first server render and
- * moves instantly on tap, before the next page finishes loading.
+ * Bottom tab bar. The indicator is positioned with pure CSS (no measuring of
+ * the bar), so it is visible in the very first server render and moves on tap.
  *
- * The whole bar is swipeable (Telegram style): press and slide across
- * the bar with a finger or the mouse, the highlight follows the pointer,
- * and releasing navigates to the tab under it. Tapping a tab still works.
+ * The whole bar is swipeable (Telegram style): press and slide across the bar,
+ * the highlight follows the pointer, releasing navigates to the tab under it.
+ * A tap navigates to the tab the finger actually touched (hit-tested), never
+ * to a neighbour guessed from the bar's percentage width.
  */
 export function LiquidTabBar({ tabs }: { tabs: readonly Tab[] }) {
   const { pathname } = useLocation();
@@ -39,73 +42,103 @@ export function LiquidTabBar({ tabs }: { tabs: readonly Tab[] }) {
   const active = tapped ?? routeIndex;
   const shown = pos ?? active;
   const n = tabs.length;
-  const barRef = useRef<HTMLDivElement>(null);
+  const cellRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const pointerId = useRef<number | null>(null);
+  const downX = useRef(0);
 
-  const posAt = (clientX: number): number | null => {
-    const el = barRef.current;
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    if (r.width <= 0) return null;
-    const t = ((clientX - r.left) / r.width) * n - 0.5;
-    return Math.min(n - 1, Math.max(0, t));
+  const centers = () =>
+    cellRefs.current
+      .slice(0, n)
+      .map((el) => {
+        const r = el?.getBoundingClientRect();
+        return r && r.width > 0 ? r.left + r.width / 2 : null;
+      });
+
+  /** The tab the finger is on: the cell it touches, else the nearest centre. */
+  const tabAt = (x: number, y: number): number | null => {
+    const hit = document.elementFromPoint(x, y)?.closest("a[data-tab]") as HTMLAnchorElement | null;
+    const hitIndex = Number(hit?.dataset.tab);
+    if (hit && Number.isInteger(hitIndex)) return hitIndex;
+    let best: number | null = null;
+    let bestDist = Infinity;
+    centers().forEach((c, i) => {
+      if (c == null) return;
+      const d = Math.abs(c - x);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    });
+    return best;
   };
 
-  const endDrag = () => {
-    pointerId.current = null;
-    setDragging(false);
+  /** Continuous bubble position while the finger slides from cell to cell. */
+  const glideAt = (x: number): number | null => {
+    const cs = centers().filter((c): c is number => c != null);
+    if (cs.length < 2) return null;
+    if (x <= cs[0]) return 0;
+    const last = cs.length - 1;
+    if (x >= cs[last]) return last;
+    for (let i = 0; i < last; i++) {
+      if (x <= cs[i + 1]) return i + (x - cs[i]) / (cs[i + 1] - cs[i]);
+    }
+    return last;
   };
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-[6px] z-20 mx-auto max-w-md px-2 pb-0 pt-1 sm:px-3">
       <div
-        ref={barRef}
         className="pointer-events-auto touch-none select-none rounded-[2rem] border border-border bg-card p-1.5 shadow-md"
         onPointerDown={(e) => {
+          console.log("DBG down", e.pointerType, e.pointerId, "cur", pointerId.current);
           if (pointerId.current !== null) return;
           pointerId.current = e.pointerId;
+          downX.current = e.clientX;
           e.currentTarget.setPointerCapture(e.pointerId);
           setDragging(true);
           setSettling(false);
           setTapped(null);
-          setPos(posAt(e.clientX));
+          setPos(glideAt(e.clientX));
         }}
         onPointerMove={(e) => {
           if (pointerId.current !== e.pointerId) return;
-          setPos(posAt(e.clientX));
+          setPos(glideAt(e.clientX));
         }}
         onPointerUp={(e) => {
+          console.log("DBG up", e.pointerType, e.pointerId, "cur", pointerId.current);
           if (pointerId.current !== e.pointerId) return;
-          const p = posAt(e.clientX);
-          const idx = p == null ? null : Math.round(p);
-          endDrag();
-          // Let the bubble spring from wherever the finger left it.
+          const idx = tabAt(e.clientX, e.clientY);
+          console.log("DBG idx", idx, "active", active, "x", e.clientX, "y", e.clientY);
+          pointerId.current = null;
+          setDragging(false);
           setSettling(true);
+          setPos(idx ?? active);
           if (idx != null && idx !== active) {
             const tab = tabs[idx];
             if (tab) {
               setTapped(idx);
               navigate({ to: tab.to });
             }
-          } else {
-            setPos(active);
           }
         }}
         onPointerCancel={() => {
           if (pointerId.current === null) return;
-          endDrag();
+          pointerId.current = null;
+          setDragging(false);
+          setSettling(true);
+          setPos(active);
         }}
       >
         <div
           className="relative grid select-none"
-          style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gap: `${GAP}px` }}
         >
           <span
             aria-hidden
             className="glass-bubble absolute inset-y-0 left-0 rounded-[1.6rem]"
             style={{
-              width: `${100 / n}%`,
-              transform: `translate3d(${shown * 100}%,0,0) scale(${
+              width: `calc((100% - ${(n - 1) * GAP}px) / ${n})`,
+              transform: `translate3d(calc(${shown} * (100% + ${GAP}px)),0,0) scale(${
                 dragging ? "1.06, 0.92" : "1, 1"
               })`,
               transition: dragging
@@ -122,15 +155,26 @@ export function LiquidTabBar({ tabs }: { tabs: readonly Tab[] }) {
               <Link
                 key={to}
                 to={to}
+                data-tab={i}
                 draggable={false}
                 preload="render"
                 aria-current={i === active ? "page" : undefined}
-                className={`relative z-10 flex flex-col items-center gap-0.5 rounded-[1.6rem] py-2 text-[11px] transition-[color,transform] duration-200 active:scale-95 ${
+                ref={(el) => {
+                  cellRefs.current[i] = el;
+                }}
+                // Pointer taps navigate from the bar itself, so the link must
+                // not fire a second (and possibly different) navigation.
+                onClick={(e) => {
+                  if (e.detail > 0 && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                    e.preventDefault();
+                  }
+                }}
+                className={`relative z-10 flex flex-col items-center gap-0.5 rounded-[1.6rem] py-1 text-[13px] transition-[color,transform] duration-200 active:scale-95 ${
                   on ? "font-semibold text-primary" : "text-muted-foreground"
                 }`}
               >
                 <Icon
-                  className={`h-[22px] w-[22px] transition-transform duration-200 ${
+                  className={`h-[26px] w-[26px] transition-transform duration-200 ${
                     on ? "scale-110" : ""
                   }`}
                   strokeWidth={on ? 2.4 : 1.8}
